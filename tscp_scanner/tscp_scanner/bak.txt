@@ -1,0 +1,290 @@
+#include <stdio.h>
+#include <iostream>
+#include <string.h>
+#include <windows.h>
+#include <iostream>
+#include <fstream>
+#include "twain.h"
+
+
+extern "C" {
+
+#include "jpeglib.h"
+#include "jerror.h"
+}
+
+
+
+TW_IDENTITY AppID;
+TW_IDENTITY m_Source;
+
+using namespace std;
+
+
+
+float FIX32ToFloat(TW_FIX32  fix32)
+{
+	float  floater;
+	floater = (float)fix32.Whole + (float)fix32.Frac / 65536.0;
+	return floater;
+}
+TW_FIX32 FloatToFix32(float floater)
+{
+	TW_FIX32 Fix32_value;
+	TW_INT32 value = (TW_INT32)(floater * 65536.0 + 0.5);
+	Fix32_value.Whole = value >> 16;
+	Fix32_value.Frac = value & 0x0000ffffL;
+	return (Fix32_value);
+}
+
+
+
+
+int main() {
+	TW_MEMREF WF = GetModuleHandle(NULL);
+	HMODULE hDSMDLL;
+	DSMENTRYPROC lpDSM_Entry;
+	if ((hDSMDLL = LoadLibrary("TWAIN_32.DLL")) != NULL) {
+		if (hDSMDLL) {
+			if ((lpDSM_Entry = (DSMENTRYPROC)GetProcAddress(hDSMDLL, MAKEINTRESOURCE(1))) != NULL) {
+				//* 成功获得 DSM_Entry()函数指针;
+				cout << "成功获得 DSM_Entry()函数指针" << endl;
+				//OpenSourceManager(&lpDSM_Entry);
+				//selectSource(lpDSM_Entry);
+				//OpenSource(&lpDSM_Entry);
+				//处理图片
+				//TW_UINT16 rc = (*lpDSM_Entry) (&AppID, &m_Source, DG_CONTROL, DAT_CAPABILITY, MSG_GET, (TW_MEMREF)&m_Source);
+				TW_UINT16 rc = (*lpDSM_Entry) (&AppID, NULL, DG_CONTROL, DAT_PARENT, MSG_OPENDSM, WF);
+				cout << "MSG_OPENDSM ";
+				cout << rc << endl;
+
+				//	memset(&m_Source, 0, sizeof(m_Source));  //MSG_GETNEXT
+				//	BOOL isEnd = true;
+				rc = (*lpDSM_Entry) (&AppID, NULL, DG_CONTROL, DAT_IDENTITY, MSG_GETFIRST, &m_Source);
+				cout << "rc "; cout << rc << endl;
+				cout << m_Source.Id << endl;
+				cout << m_Source.ProductName << endl;
+				string scannerName = "WIA-Pantum M6550 Series Scanner";
+				while (true) {
+					rc = (*lpDSM_Entry) (&AppID, NULL, DG_CONTROL, DAT_IDENTITY, MSG_GETNEXT, &m_Source);
+					cout << "rc "; cout << rc << endl;
+					cout << m_Source.Id << endl;
+					cout << m_Source.ProductName << endl;
+
+					if (rc != 0 || scannerName.compare(m_Source.ProductName) == 0) {
+						cout << "jump scanner name "; cout << m_Source.ProductName << endl;
+						break;
+					}
+					else {}
+				}
+
+				cout << "获得扫描仪数据源为 "; cout << m_Source.ProductName << endl;
+
+				rc = (*lpDSM_Entry) (&AppID, NULL, DG_CONTROL, DAT_IDENTITY, MSG_OPENDS, &m_Source);
+				cout << "open source  "; cout << rc << endl;
+
+
+
+				TW_CAPABILITY cap;
+				cap.Cap = CAP_XFERCOUNT;
+				cap.ConType = TWON_DONTCARE16;
+				//		rc = (*lpDSM_Entry) (&AppID, &m_Source, DG_CONTROL, DAT_CAPABILITY, MSG_SET, &cap);
+				//	cout << "MSG_SET "; cout << rc << endl;
+				//	cout << "cap1 "; cout << cap.Cap << endl;
+				//		cout << "cap2 "; cout << cap.ConType << endl;
+				//	cout << "cap3 "; cout << cap.hContainer << endl;
+
+
+
+				cout << "cap "; cout << cap.Cap << endl;
+				cout << "cap "; cout << cap.ConType << endl;
+				rc = (*lpDSM_Entry) (&AppID, &m_Source, DG_CONTROL, DAT_CAPABILITY, MSG_GET, &cap);
+	
+		
+
+			    TW_CAPABILITY   twCapability;
+			//	TW_INT16         rc;
+				//Setup TW_CAPABILITY Structure 
+				twCapability.Cap = CAP_CUSTOMDSDATA;     //Fill in capability of interest 
+				twCapability.ConType = TWON_DONTCARE16;
+				twCapability.hContainer = NULL;
+				//Send the Triplet 
+
+
+
+				rc = (*lpDSM_Entry)(&AppID, &m_Source, DG_CONTROL, DAT_CAPABILITY, MSG_GET, (TW_MEMREF)&twCapability);
+				if (rc == TWRC_SUCCESS) {
+					//Switch on Container Type 
+					switch (twCapability.ConType)
+					{
+						//-----ENUMERATION 
+					case TWON_ENUMERATION:
+					{
+						pTW_ENUMERATION   pvalEnum;
+						TW_UINT16         valueU16;
+						TW_UINT16         index;
+						pvalEnum =
+							(pTW_ENUMERATION)GlobalLock(twCapability.hContainer);
+						int NumItems = pvalEnum->NumItems;
+						int CurrentIndex = pvalEnum->CurrentIndex;
+						int DefaultIndex = pvalEnum->DefaultIndex;
+						index = 0;
+						//for (index = 0; index < pvalEnum->NumItems; index++)
+							while(index < pvalEnum->NumItems)
+						{
+							if (pvalEnum->ItemType == TWTY_UINT16)
+							{
+								valueU16 = ((TW_UINT16)(pvalEnum->ItemList[index * 2]));
+								//Store Item Value 
+							}else if (pvalEnum->ItemType == TWTY_BOOL)
+							{
+								boolean valueBool = ((TW_BOOL*)&pvalEnum->ItemList)[index];
+							}
+						}
+							index++;
+							GlobalUnlock(twCapability.hContainer);
+					}
+					break;
+					//-----ONEVALUE 
+					case TWON_ONEVALUE:
+					{
+						pTW_ONEVALUE      pvalOneValue;
+						TW_BOOL         valueBool;
+						pvalOneValue =
+							(pTW_ONEVALUE)GlobalLock(twCapability.hContainer);
+						if (pvalOneValue->ItemType == TWTY_BOOL)
+						{
+							valueBool = (TW_BOOL)pvalOneValue->Item;
+							//Store Item Value 
+						}
+						GlobalUnlock(twCapability.hContainer);
+					}
+					break;
+					//-----RANGE 
+					case TWON_RANGE:
+					{
+						pTW_RANGE         pvalRange;
+						pTW_FIX32         pTWFix32;
+						float            valueF32;
+						TW_UINT16         index;
+						pvalRange = (pTW_RANGE)GlobalLock(twCapability.hContainer);
+						if ((TW_UINT16)pvalRange->ItemType == TWTY_FIX32)
+						{
+							pTWFix32 = (pTW_FIX32)(pvalRange->MinValue);
+							valueF32 = FIX32ToFloat(*pTWFix32);
+							//Store Item Value 
+							pTWFix32 = (pTW_FIX32)(pvalRange->MaxValue);
+							valueF32 = FIX32ToFloat(*pTWFix32);
+							//Store Item Value 
+							pTWFix32 = (pTW_FIX32)(pvalRange->StepSize);
+							valueF32 = FIX32ToFloat(*pTWFix32);
+							//Store Item Value 
+						}
+						GlobalUnlock(twCapability.hContainer);
+					}
+					break;
+					//-----ARRAY 
+					case TWON_ARRAY:
+					{
+						pTW_ARRAY         pvalArray;
+						TW_UINT16         valueU16;
+						TW_UINT16         index;
+					
+						pvalArray = (pTW_ARRAY)GlobalLock(twCapability.hContainer);
+						for (index = 0; index < pvalArray->NumItems; index++)
+						{
+							if (pvalArray->ItemType == TWTY_UINT16)
+							{
+								valueU16 = ((TW_UINT16)(pvalArray->ItemList[index * 2]));
+								//Store Item Value 
+							}
+						}
+						GlobalUnlock(twCapability.hContainer);
+					}
+					break;
+					}   //End Switch Statement 
+					GlobalFree(twCapability.hContainer);
+				}
+				else {
+					//Capability MSG_GET Failed check Condition Code 
+				}
+				// Creating(packing) a Container for a MSG_SET Operation
+				TW_CAPABILITY   twCapability;
+			//	TW_INT16         rc;
+				TW_UINT32         NumberOfItems;
+				twCapability.Cap = CAP_CUSTOMDSDATA;      //Insert Capability of Interest 
+				twCapability.ConType = TWON_DONTCARE16;
+				//Use TWON_ONEVALUE or TWON_ARRAY to set current value 
+				//Use TWON_ENUMERATION or TWON_RANGE to limit available values 
+				switch (twCapability.ConType)
+				{
+				case TWON_ENUMERATION:
+				{
+					pTW_ENUMERATION   pvalEnum;
+					//The number of Items in the ItemList 
+					NumberOfItems = 2;
+					//Allocate memory for the container and additional ItemList 
+					// entries 
+					twCapability.hContainer = GlobalAlloc(GHND, (sizeof(TW_ENUMERATION) + sizeof(TW_UINT16) * (NumberOfItems)));
+					pvalEnum = (pTW_ENUMERATION)GlobalLock(twCapability.hContainer);
+					pvalEnum->NumItems = 2;     //Number of Items in ItemList 
+					pvalEnum->ItemType = TWTY_UINT16;
+					((pvalEnum->ItemList[0])) = 1;
+					((pvalEnum->ItemList[1])) = 2;
+					GlobalUnlock(twCapability.hContainer);
+				}
+				break;
+				//-----ONEVALUE 
+				case TWON_ONEVALUE:
+				{
+					pTW_ONEVALUE      pvalOneValue;
+					twCapability.hContainer = GlobalAlloc(GHND, sizeof(TW_ONEVALUE)); pvalOneValue = (pTW_ONEVALUE)GlobalLock(twCapability.hContainer);
+					pvalOneValue->ItemType = TWTY_UINT16;
+					pvalOneValue->Item = 1;
+					GlobalUnlock(twCapability.hContainer);
+				}
+				break;
+				case TWON_RANGE:
+				{
+					pTW_RANGE         pvalRange;
+					TW_FIX32         TWFix32;
+					float            valueF32;
+					twCapability.hContainer = GlobalAlloc(GHND, sizeof(TW_RANGE));
+					pvalRange = (pTW_RANGE)GlobalLock(twCapability.hContainer);
+					pvalRange->ItemType = TWTY_FIX32;
+					valueF32 = 100;
+					//	TWFix32 = FloatToFIX32(valueF32);
+					pvalRange->MinValue = *((pTW_INT32)&TWFix32);
+					valueF32 = 200;
+					//	TWFix32 = FloatToFIX32(valueF32);
+					pvalRange->MaxValue = *((pTW_INT32)&TWFix32);
+					GlobalUnlock(twCapability.hContainer);
+				}
+				break;
+				case TWON_ARRAY:
+				{
+					pTW_ARRAY         pvalArray;
+					NumberOfItems = 2;
+					twCapability.hContainer = GlobalAlloc(GHND, (sizeof(TW_ARRAY) + sizeof(TW_UINT16) * (NumberOfItems)));
+					pvalArray = (pTW_ARRAY)GlobalLock(twCapability.hContainer);
+					pvalArray->ItemType = TWTY_UINT16;
+					pvalArray->NumItems = 2;
+					(pvalArray->ItemList[0]) = 1;
+					(pvalArray->ItemList[1]) = 2;
+					GlobalUnlock(twCapability.hContainer);
+				}
+				break;
+				}
+				rc = (*lpDSM_Entry)(&AppID, &m_Source, DG_CONTROL, DAT_CAPABILITY, MSG_SET, (TW_MEMREF)&twCapability);
+				GlobalFree(twCapability.hContainer);
+				switch (rc)
+				{
+				case TWRC_SUCCESS:
+				case TWRC_CHECKSTATUS:
+				case TWRC_FAILURE:
+				}
+			}
+		}
+	}
+}
+

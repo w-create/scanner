@@ -1,0 +1,8 @@
+﻿  winScannerService.cpp
+d:\cworkspace\tscp_scanner\tscp_scanner\winscannerservice.cpp(68): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+d:\cworkspace\tscp_scanner\tscp_scanner\winscannerservice.cpp(302): warning C4244: “初始化”: 从“TW_BOOL”转换到“boolean”，可能丢失数据
+d:\cworkspace\tscp_scanner\tscp_scanner\winscannerservice.cpp(227): warning C4101: “twCap”: 未引用的局部变量
+d:\cworkspace\tscp_scanner\tscp_scanner\winscannerservice.cpp(228): warning C4101: “pVal”: 未引用的局部变量
+d:\cworkspace\tscp_scanner\tscp_scanner\winscannerservice.cpp(336): warning C4101: “index”: 未引用的局部变量
+d:\cworkspace\tscp_scanner\tscp_scanner\winscannerservice.cpp(756): warning C4101: “pRgb”: 未引用的局部变量
+  tscp_scanner.vcxproj -> D:\cworkspace\tscp_scanner\Debug\tscp_scanner.exe
